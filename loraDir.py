@@ -237,7 +237,8 @@ class myNode():
         self.y = 0
         
         # antenna height for HATA modelisation
-        self.antenna_height = 1e-2
+        # self.antenna_height = 1e-2
+        self.antenna_height = 1 #1 meter, why 1e-2 ?
 
         # this is very complex prodecure for placing nodes
         # and ensure minimum distance between each pair of nodes
@@ -278,7 +279,7 @@ class myNode():
         global graphics
         if (graphics == 1):
             global ax
-            ax.add_artist(plt.Circle((self.x, self.y), 2, fill=True, color='blue'))
+            ax.add_artist(plt.Circle((self.x, self.y), maxDist//100, fill=True, color='blue'))
 
 #
 # this function creates a packet (associated with a node)
@@ -535,10 +536,18 @@ Ptx = 14
 gamma = 2.08
 d0 = 40.0
 var = 0           # variance ignored for now
+# base station antenna height in meters
+bs_height = 10
+# Parameters for Path loss and max distance estimation
+# Simplification : based on a 860 MHz carrier and 1 meter high mobile station antenna
+bs_height_corr_sc_0 = 0.8 + (1.1*math.log10(860)-0.7) * 1 - 1.56*math.log10(860)
+bs_height_corr_lc_0 = 3.2 * (math.log10(11.75 * 1)**2) - 4.97
+Lu_sc_0 = 69.55 + 26.16*math.log10(860) - 13.82 * math.log10(bs_height) - bs_height_corr_sc_0
+Lu_lc_0 = 69.55 + 26.16*math.log10(860) - 13.82 * math.log10(bs_height) - bs_height_corr_lc_0
+Lsu_0 = Lu_sc_0 - 2 * (math.log10(860/28)**2) - 5.4
+Lo_0 = Lu_sc_0 - 4.78*(math.log10(860)**2) + 18.33*math.log10(860) - 40.94
 Lpld0 = 127.41
 GL = 0
-# base station antenna height in meters
-bs_height = 2
 
 sensi = np.array([sf7,sf8,sf9,sf10,sf11,sf12])
 if experiment in [0,1,4]:
@@ -549,7 +558,18 @@ elif experiment in [3,5]:
     minsensi = np.amin(sensi) ## Experiment 3 can use any setting, so take minimum
 Lpl = Ptx - minsensi
 print("amin", minsensi, "Lpl", Lpl)
-maxDist = d0*(math.e**((Lpl-Lpld0)/(10.0*gamma)))
+
+if environment == 0:
+    maxDist = 1000*10**((Lpl - Lo_0)/(44.9-6.55*math.log10(bs_height)))
+elif environment == 1:
+    maxDist = 1000*10**((Lpl - Lsu_0)/(44.9-6.55*math.log10(bs_height)))
+elif environment == 2:
+    maxDist = 1000*10**((Lpl - Lu_sc_0)/(44.9-6.55*math.log10(bs_height)))
+elif environment == 3:
+    maxDist = 1000*10**((Lpl - Lu_lc_0)/(44.9-6.55*math.log10(bs_height)))
+else:
+    maxDist = d0*(math.e**((Lpl-Lpld0)/(10.0*gamma)))
+
 print("maxDist:", maxDist)
 
 # base station placement
@@ -564,7 +584,7 @@ if (graphics == 1):
     plt.figure()
     ax = plt.gcf().gca()
     # XXX should be base station position
-    ax.add_artist(plt.Circle((bsx, bsy), 3, fill=True, color='green'))
+    ax.add_artist(plt.Circle((bsx, bsy), maxDist//100, fill=True, color='green'))
     ax.add_artist(plt.Circle((bsx, bsy), maxDist, fill=False, color='green'))
 
 
@@ -581,6 +601,7 @@ if (graphics == 1):
     plt.ylim([0, ymax])
     plt.draw()
     plt.show()
+    plt.savefig('map.png',dpi=300)
 
 # start simulation
 env.run(until=simtime)
