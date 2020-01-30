@@ -17,7 +17,7 @@
 
 """
  SYNOPSIS:
-   ./loraDir.py <nodes> <avgsend> <experiment> <simtime> [collision]
+   ./loraDir.py <nodes> <avgsend> <experiment> <simtime> <environment> [collision]
  DESCRIPTION:
     nodes
         number of nodes to simulate
@@ -36,6 +36,11 @@
         5   similair to experiment 3, but also optimises the transmit power.
     simtime
         total running time in milliseconds
+    environment
+        0 open
+        1 suburban
+        2 small to medium city
+        3 large city
     collision
         set to 1 to enable the full collision check, 0 to use a simplified check.
         With the simplified check, two messages collide when they arrive at the
@@ -227,6 +232,9 @@ class myNode():
         self.bs = bs
         self.x = 0
         self.y = 0
+        
+        # antenna height for HATA modelisation
+        self.antenna_height = 1e-2
 
         # this is very complex prodecure for placing nodes
         # and ensure minimum distance between each pair of nodes
@@ -241,7 +249,7 @@ class myNode():
             posx = b*maxDist*math.cos(2*math.pi*a/b)+bsx
             posy = b*maxDist*math.sin(2*math.pi*a/b)+bsy
             if len(nodes) > 0:
-                for index, n in enumerate(nodes):
+                for _, n in enumerate(nodes):
                     dist = np.sqrt(((abs(n.x-posx))**2)+((abs(n.y-posy))**2))
                     if dist >= 10:
                         found = 1
@@ -260,7 +268,7 @@ class myNode():
         self.dist = np.sqrt((self.x-bsx)*(self.x-bsx)+(self.y-bsy)*(self.y-bsy))
         print('node %d' %nodeid, "x", self.x, "y", self.y, "dist: ", self.dist)
 
-        self.packet = myPacket(self.nodeid, packetlen, self.dist)
+        self.packet = myPacket(self.nodeid, self.antenna_height, packetlen, self.dist)
         self.sent = 0
 
         # graphics for node
@@ -274,7 +282,7 @@ class myNode():
 # it also sets all parameters, currently random
 #
 class myPacket():
-    def __init__(self, nodeid, plen, distance):
+    def __init__(self, nodeid, antenna_height, plen, distance):
         global experiment
         global Ptx
         global gamma
@@ -285,6 +293,11 @@ class myPacket():
 
         self.nodeid = nodeid
         self.txpow = Ptx
+
+        self.ms_height = antenna_height
+
+        # frequencies: lower bound + number of 61 Hz steps
+        self.freq = 860000000 + random.randint(0,2622950)
 
         # randomize configuration values
         self.sf = random.randint(6,12)
@@ -314,9 +327,48 @@ class myPacket():
         Prx = self.txpow  ## zero path loss by default
 
         # log-shadow
-        Lpl = Lpld0 + 10*gamma*math.log10(distance/d0)
+        Lpl = Lpld0 + 10 * gamma * math.log10(distance / d0)
         print "Lpl:", Lpl
-        Prx = self.txpow - GL - Lpl
+
+        # Hata Fading model in urban environment
+        # distance is distance to the base station, must be in km in the HATA formula
+        ONE_KM = 1000
+        # frequency is in MHz in the formula
+        ONE_MHZ = 1000000
+
+        # For small or medium-sized city:
+        bs_height_corr_sc = 0.8 + (1.1*math.log10(self.freq/ONE_MHZ)-0.7) * self.ms_height - 1.56*math.log10(self.freq/ONE_MHZ)
+        Lu_sc = 69.55 + 26.16*math.log10(self.freq / ONE_MHZ) - 13.82 * math.log10(bs_height) - bs_height_corr_sc + (44.9-6.55 * math.log10(bs_height)) * math.log10(distance / ONE_KM)
+
+        # For a large city:
+        bs_height_corr_lc = 3.2 * (math.log10(11.75 * self.ms_height)**2) - 4.97
+        Lu_lc = 69.55 + 26.16*math.log10(self.freq / ONE_MHZ) - 13.82 * math.log10(bs_height) - bs_height_corr_lc + (44.9-6.55 * math.log10(bs_height)) * math.log10(distance / ONE_KM)
+
+        # Path loss from city. Unit: decibel (dB)
+        print ("Lu_sc:", Lu_sc)
+        print ("Lu_lc:", Lu_lc)
+
+        # Hata Fading model in suburban environment
+        # LSU = Path loss in suburban areas. Unit: decibel (dB)
+        Lsu = Lu_sc - 2 * (math.log10(self.freq/28/ONE_MHZ)**2) - 5.4
+
+        print ("Lsu:", Lsu)
+
+        # Hata Fading model in open environment
+        # LSU = Path loss in suburban areas. Unit: decibel (dB)
+        Lo = Lu_sc - 4.78*(math.log10(self.freq/ONE_MHZ)**2) + 18.33*math.log10(self.freq/ONE_MHZ) - 40.94
+        print ("Lo:", Lo)
+
+        if environment == 0:
+            Prx = self.txpow - GL - Lo
+        elif environment == 1:
+            Prx = self.txpow - GL - Lsu
+        elif environment == 2:
+            Prx = self.txpow - GL - Lu_sc
+        elif environment == 3:
+            Prx = self.txpow - GL - Lu_lc
+        else:
+            Prx = self.txpow - GL - Lpl
 
         if (experiment == 3) or (experiment == 5):
             minairtime = 9999
@@ -362,8 +414,6 @@ class myPacket():
         self.symTime = (2.0**self.sf)/self.bw
         self.arriveTime = 0
         self.rssi = Prx
-        # frequencies: lower bound + number of 61 Hz steps
-        self.freq = 860000000 + random.randint(0,2622950)
 
         # for certain experiments override these and
         # choose some random frequences
@@ -439,11 +489,13 @@ def transmit(env,node):
 #
 
 # get arguments
-if len(sys.argv) >= 5:
+if len(sys.argv) >= 6:
     nrNodes = int(sys.argv[1])
     avgSendTime = int(sys.argv[2])
     experiment = int(sys.argv[3])
     simtime = int(sys.argv[4])
+    environment = int(sys.argv[5])
+
     if len(sys.argv) > 5:
         full_collision = bool(int(sys.argv[5]))
     print "Nodes:", nrNodes
@@ -451,6 +503,7 @@ if len(sys.argv) >= 5:
     print "Experiment: ", experiment
     print "Simtime: ", simtime
     print "Full Collision: ", full_collision
+    print "Environment: ", environment
 else:
     print "usage: ./loraDir <nodes> <avgsend> <experiment> <simtime> [collision]"
     print "experiment 0 and 1 use 1 frequency only"
@@ -481,6 +534,8 @@ d0 = 40.0
 var = 0           # variance ignored for now
 Lpld0 = 127.41
 GL = 0
+# base station antenna height in meters
+bs_height = 2
 
 sensi = np.array([sf7,sf8,sf9,sf10,sf11,sf12])
 if experiment in [0,1,4]:
