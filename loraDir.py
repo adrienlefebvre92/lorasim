@@ -1,5 +1,5 @@
 #!./lora-env/bin/python
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
  LoRaSim 0.2.1: simulate collisions in LoRa
  Copyright © 2016 Thiemo Voigt <thiemo@sics.se> and Martin Bor <m.bor@lancaster.ac.uk>
