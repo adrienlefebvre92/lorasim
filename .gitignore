@@ -1,4 +1,4 @@
 .vscode
-
+lora-env
 # exclude experiment files
 exp[0-9]*.dat
