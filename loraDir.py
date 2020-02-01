@@ -274,6 +274,7 @@ class myNode():
 
         self.packet = myPacket(self.nodeid, self.antenna_height, packetlen, self.dist)
         self.sent = 0
+        self.transmissions = 0
 
         # graphics for node
         global graphics
@@ -439,14 +440,19 @@ class myPacket():
 # a global list of packet being processed at the gateway
 # is maintained
 #
+
 def transmit(env,node):
+    global nrCollisions
     while True:
         yield env.timeout(random.expovariate(1.0/float(node.period)))
 
         # time sending and receiving
         # packet arrives -> add to base station
 
-        node.sent = node.sent + 1
+        node.sent += 1
+        global nrEmitted
+        nrEmitted += 1
+        node.transmissions = node.transmissions + 1
         if (node in packetsAtBS):
             print("ERROR: packet already in")
         else:
@@ -458,6 +464,7 @@ def transmit(env,node):
                 node.packet.lost = False
                 # adding packet if no collision
                 if (checkcollision(node.packet)==1):
+                    nrCollisions += 1
                     node.packet.collided = 1
                 else:
                     node.packet.collided = 0
@@ -466,24 +473,57 @@ def transmit(env,node):
 
         yield env.timeout(node.packet.rectime)
 
-        if node.packet.lost:
-            global nrLost
-            nrLost += 1
-        if node.packet.collided == 1:
-            global nrCollisions
-            nrCollisions = nrCollisions +1
-        if node.packet.collided == 0 and not node.packet.lost:
-            global nrReceived
-            nrReceived = nrReceived + 1
-        if node.packet.processed == 1:
-            global nrProcessed
-            nrProcessed = nrProcessed + 1
-
+       
         # complete packet has been received by base station
         # can remove it
         if (node in packetsAtBS):
             packetsAtBS.remove(node)
             # reset the packet
+
+        if node.packet.lost:
+            global nrLost
+            nrLost += 1
+        if node.packet.processed == 1:
+            global nrProcessed
+            nrProcessed = nrProcessed + 1
+        if node.packet.collided == 1:
+            tries = 1
+            maxTries = 10
+            if retransmitting == 1:
+                while node.packet.collided == 1 and tries < maxTries:
+                    tries += 1
+                    node.transmissions += 1
+                    nrEmitted += 1
+
+                    # Based on the hypothesis that the retransmissions will be over before the next node's packet
+                    yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(10*node.packet.rectime))))
+                    
+                    if (checkcollision(node.packet)==1):
+                        nrCollisions += 1
+                        node.packet.collided = 1
+                    else:
+                        node.packet.collided = 0
+                    packetsAtBS.append(node)
+                    node.packet.addTime = env.now
+
+                    yield env.timeout(node.packet.rectime)
+
+                    # complete packet has been received by base station
+                    # can remove it
+                    if (node in packetsAtBS):
+                        packetsAtBS.remove(node)
+
+            if node.packet.collided == 0:
+                print("packet saved by the {}th transmission".format(tries))
+            if node.packet.collided == 1:
+                print("packet lost after {} transmissions".format(tries))
+                global nrLostAfterRetransmissions
+                nrLostAfterRetransmissions += 1
+        if node.packet.collided == 0 and not node.packet.lost:
+            global nrReceived
+            nrReceived = nrReceived + 1
+        
+        # reset the packet
         node.packet.collided = 0
         node.packet.processed = 0
         node.packet.lost = False
@@ -493,23 +533,25 @@ def transmit(env,node):
 #
 
 # get arguments
-if len(sys.argv) >= 6:
+if len(sys.argv) >= 7:
     nrNodes = int(sys.argv[1])
     avgSendTime = int(sys.argv[2])
     experiment = int(sys.argv[3])
     simtime = int(sys.argv[4])
     environment = int(sys.argv[5])
+    retransmitting = int(sys.argv[6])
 
-    if len(sys.argv) > 5:
-        full_collision = bool(int(sys.argv[5]))
+    if len(sys.argv) > 7:
+        full_collision = bool(int(sys.argv[7]))
     print("Nodes:", nrNodes)
     print("AvgSendTime (exp. distributed):",avgSendTime)
     print("Experiment: ", experiment)
     print("Simtime: ", simtime)
     print("Full Collision: ", full_collision)
     print("Environment: ", environment)
+    print("Retransmission Scheme: ", retransmitting)
 else:
-    print("usage: ./loraDir <nodes> <avgsend> <experiment> <simtime> [collision]")
+    print("usage: ./loraDir <nodes> <avgsend> <experiment> <simtime> <environment> [collision]")
     print("experiment 0 and 1 use 1 frequency only")
     exit(-1)
 
@@ -528,9 +570,11 @@ maxBSReceives = 8
 # also more unit-disc like according to Utz
 bsId = 1
 nrCollisions = 0
+nrLostAfterRetransmissions = 0
 nrReceived = 0
 nrProcessed = 0
 nrLost = 0
+nrEmitted = 0
 
 Ptx = 14
 gamma = 2.08
@@ -623,19 +667,23 @@ energy = sum(node.packet.rectime * TX[int(node.packet.txpow)+2] * V * node.sent 
 print("energy (in J): ", energy)
 print("sent packets: ", sent)
 print("collisions: ", nrCollisions)
+print("packets lost after all retransmissions: ", nrLostAfterRetransmissions)
 print("received packets: ", nrReceived)
+print("emitted packets (counting retransmissions): ", nrEmitted)
 print("processed packets: ", nrProcessed)
 print("lost packets: ", nrLost)
 
 # data extraction rate
-der = (sent-nrCollisions)/float(sent)
+der = (sent-nrLostAfterRetransmissions)/float(sent)
 print("DER:", der)
 der = (nrReceived)/float(sent)
 print("DER method 2:", der)
+der = (nrEmitted-nrCollisions)/float(nrEmitted)
+print("Collided packet proportion:", der)
 
 # this can be done to keep graphics visible
-if (graphics == 1):
-    raw_input('Press Enter to continue ...')
+#if (graphics == 1):
+#    raw_input('Press Enter to continue ...')
 
 # save experiment data into a dat file that can be read by e.g. gnuplot
 # name of file would be:  exp0.dat for experiment 0
