@@ -46,6 +46,8 @@
         With the simplified check, two messages collide when they arrive at the
         same time, on the same frequency and spreading factor. The full collision
         check considers the 'capture effect', whereby a collision of one or the
+    retransmitting
+        set to 1 lost packets will be retransmitted
  OUTPUT
     The result of every simulation run will be appended to a file named expX.dat,
     whereby X is the experiment number. The file contains a space separated table
@@ -502,6 +504,26 @@ def transmit(env,node):
                     tries += 1
                     node.transmissions += 1
                     nrEmitted += 1
+                    
+                    # frequencyCollision, conditions
+                    #
+                    #        |f1-f2| <= 120 kHz if f1 or f2 has bw 500
+                    #        |f1-f2| <= 60 kHz if f1 or f2 has bw 250
+                    #        |f1-f2| <= 30 kHz if f1 or f2 has bw 125
+
+                    # random choice of frequency
+                    min_freq = {125: 30, 250: 60, 500: 120}
+
+                    number_channel = math.floor(node.packet.bw / min_freq[node.packet.bw])
+
+                    # f0 is 860Mz
+                    BASE_FREQ = 860e6
+                    
+                    # frequency gap is the smallest for no collision
+                    FREQ_GAP = node.packet.bw / number_channel
+
+
+                    node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
                     yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(10*node.packet.rectime))))
