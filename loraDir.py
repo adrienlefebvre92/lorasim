@@ -526,7 +526,7 @@ def transmit(env,node):
                     node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
-                    yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(10*node.packet.rectime))))
+                    yield env.timeout(2*node.packet.rectime) # param to adjust
                     
                     if (checkcollision(node.packet)==1):
                         nrCollisions += 1
