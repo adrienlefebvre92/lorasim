@@ -305,6 +305,16 @@ class myPacket():
 
         # frequencies: lower bound + number of 61 Hz steps
         self.freq = 860000000 + random.randint(0,2622950)
+        # for certain experiments override these and
+        # choose some random frequences
+        if experiment == 1:
+            self.freq = random.choice([860000000, 864000000, 868000000])
+        else:
+            # self.freq = 860000000
+            number_channel = 8
+            BASE_FREQ = 860e6
+            FREQ_GAP = 250e3
+            node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
         # for certain experiments override these and
         # choose some random frequences
@@ -512,17 +522,19 @@ def transmit(env,node):
                     #        |f1-f2| <= 30 kHz if f1 or f2 has bw 125
 
                     # random choice of frequency
-                    min_freq = {125: 30, 250: 60, 500: 120}
-
-                    number_channel = math.floor(node.packet.bw / min_freq[node.packet.bw])
+                    # min_freq = {125: 30, 250: 60, 500: 120}
+                    # number_channel = math.floor(node.packet.bw / min_freq[node.packet.bw])
+                    number_channel = 8
 
                     # f0 is 860Mz
                     BASE_FREQ = 860e6
                     
                     # frequency gap is the smallest for no collision
-                    FREQ_GAP = node.packet.bw / number_channel
+                    # FREQ_GAP = node.packet.bw / number_channel
+                    # node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
-
+                    # 8 possible channels with 250kHz space
+                    FREQ_GAP = 250e3
                     node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
