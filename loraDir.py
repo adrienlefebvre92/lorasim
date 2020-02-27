@@ -389,7 +389,7 @@ class myPacket():
             Prx = self.txpow - GL - Lpl
 
         rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
-        print('Rayleigh fading', rayFading)
+        print('Rayleigh fading ', rayFading)
         Prx -= rayFading
 
         if (experiment == 3) or (experiment == 5):
