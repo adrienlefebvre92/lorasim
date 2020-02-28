@@ -304,6 +304,17 @@ class myPacket():
         # frequencies: lower bound + number of 61 Hz steps
         self.freq = 860000000 + random.randint(0,2622950)
 
+        # for certain experiments override these and
+        # choose some random frequences
+        if experiment == 1:
+            self.freq = random.choice([860000000, 864000000, 868000000])
+        else:
+            # self.freq = 860000000
+            number_channel = 8
+            BASE_FREQ = 860e6
+            FREQ_GAP = 250e3
+            self.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
+
         # randomize configuration values
         self.sf = random.randint(6,12)
         self.cr = random.randint(1,4)
@@ -375,6 +386,10 @@ class myPacket():
         else:
             Prx = self.txpow - GL - Lpl
 
+        rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+        print('Rayleigh fading', rayFading)
+        Prx -= rayFading
+
         if (experiment == 3) or (experiment == 5):
             minairtime = 9999
             minsf = 0
@@ -419,13 +434,6 @@ class myPacket():
         self.symTime = (2.0**self.sf)/self.bw
         self.arriveTime = 0
         self.rssi = Prx
-
-        # for certain experiments override these and
-        # choose some random frequences
-        if experiment == 1:
-            self.freq = random.choice([860000000, 864000000, 868000000])
-        else:
-            self.freq = 860000000
 
         print("frequency" ,self.freq, "symTime ", self.symTime)
         print("bw", self.bw, "sf", self.sf, "cr", self.cr, "rssi", self.rssi)
@@ -580,6 +588,7 @@ Ptx = 14
 gamma = 2.08
 d0 = 40.0
 var = 0           # variance ignored for now
+sigma = 1   #Scale parameter for Rayleigh fading
 # base station antenna height in meters
 bs_height = 10
 # Parameters for Path loss and max distance estimation
