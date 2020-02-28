@@ -314,7 +314,7 @@ class myPacket():
             number_channel = 8
             BASE_FREQ = 860e6
             FREQ_GAP = 250e3
-            node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
+            self.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
 
         # for certain experiments override these and
         # choose some random frequences
