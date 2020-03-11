@@ -510,6 +510,7 @@ def transmit(env,node):
             tries = 1
             maxTries = 10
             if retransmitting == 1:
+                #Random Channel Retransmission
                 while node.packet.collided == 1 and tries < maxTries:
                     tries += 1
                     node.transmissions += 1
@@ -539,6 +540,31 @@ def transmit(env,node):
 
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
                     yield env.timeout(2*node.packet.rectime) # param to adjust
+                    
+                    if (checkcollision(node.packet)==1):
+                        nrCollisions += 1
+                        node.packet.collided = 1
+                    else:
+                        node.packet.collided = 0
+                    packetsAtBS.append(node)
+                    node.packet.addTime = env.now
+
+                    yield env.timeout(node.packet.rectime)
+
+                    # complete packet has been received by base station
+                    # can remove it
+                    if (node in packetsAtBS):
+                        packetsAtBS.remove(node)
+
+            if retransmitting == 2:
+                #Random duration retransmission
+                while node.packet.collided == 1 and tries < maxTries:
+                    tries += 1
+                    node.transmissions += 1
+                    nrEmitted += 1
+
+                    # Based on the hypothesis that the retransmissions will be over before the next node's packet
+                    yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(waitDurationParam*avgSendTime))))
                     
                     if (checkcollision(node.packet)==1):
                         nrCollisions += 1
@@ -623,6 +649,7 @@ gamma = 2.08
 d0 = 40.0
 var = 0           # variance ignored for now
 sigma = 1   #Scale parameter for Rayleigh fading
+waitDurationParam = 0.1 # Factor that determines the % of émission rate for the retransmission rate
 # base station antenna height in meters
 bs_height = 10
 # Parameters for Path loss and max distance estimation
