@@ -1,0 +1,19 @@
+#!/bin/bash
+INTERVAL=1000000
+SIMTIME=10000000
+MODE=4
+LOSS_MODEL=2
+RETRANSMISSION=0
+
+for s in $(seq 0.5 0.5 10)
+	do
+		echo "Parameters: Interval Mode Simtime PathLossModel Retransmission Sigma" >> bash_export_exp6_noRetrans_Rayleigh_Test.txt
+		echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION $s >> bash_export_exp6_noRetrans_Rayleigh_Test.txt
+		for i in {1..2001..100}
+        		do
+                		echo -n $i ", "
+                		python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION $s | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_Rayleigh_Test.txt
+        		done
+		echo "work done" >>bash_export_exp6_noRetrans_Rayleigh_Test.txt
+	done
+done

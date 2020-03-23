@@ -11,6 +11,6 @@ echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_ra
 for i in {1..2001..10}
         do
                 echo -n $i ", "
-                python3 loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_random_retransmission.txt
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_random_retransmission.txt
         done
 echo "work done" >>bash_export_exp6_random_retransmission.txt

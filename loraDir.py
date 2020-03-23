@@ -353,6 +353,7 @@ class myPacket():
         # for experiment 3 find the best setting
         # OBS, some hardcoded values
         Prx = self.txpow  ## zero path loss by default
+        print("Prx without Path Loss:", Prx)
 
         # log-shadow
         Lpl = Lpld0 + 10 * gamma * math.log10(distance / d0)
@@ -397,10 +398,14 @@ class myPacket():
             Prx = self.txpow - GL - Lu_lc
         else:
             Prx = self.txpow - GL - Lpl
+        
+        print("Prx:", Prx)
 
         rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
         print('Rayleigh fading ', rayFading)
         Prx -= rayFading
+
+        print("Prx with Rayleigh Fading:", Prx)
 
         if (experiment == 3) or (experiment == 5):
             minairtime = 9999
@@ -580,6 +585,36 @@ def transmit(env,node):
                     # can remove it
                     if (node in packetsAtBS):
                         packetsAtBS.remove(node)
+            
+            if retransmitting == 3:
+                #Random duration retransmission and random frequency
+                while node.packet.collided == 1 and tries < maxTries:
+                    tries += 1
+                    node.transmissions += 1
+                    nrEmitted += 1
+
+                    number_channel = 8
+                    BASE_FREQ = 860e6
+                    FREQ_GAP = 250e3
+                    node.packet.freq = BASE_FREQ + FREQ_GAP * random.randint(0, number_channel)
+
+                    # Based on the hypothesis that the retransmissions will be over before the next node's packet
+                    yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(waitDurationParam*avgSendTime))))
+                    
+                    if (checkcollision(node.packet)==1):
+                        nrCollisions += 1
+                        node.packet.collided = 1
+                    else:
+                        node.packet.collided = 0
+                    packetsAtBS.append(node)
+                    node.packet.addTime = env.now
+
+                    yield env.timeout(node.packet.rectime)
+
+                    # complete packet has been received by base station
+                    # can remove it
+                    if (node in packetsAtBS):
+                        packetsAtBS.remove(node)
 
             if node.packet.collided == 0:
                 print("packet saved by the {}th transmission".format(tries))
@@ -601,16 +636,21 @@ def transmit(env,node):
 #
 
 # get arguments
-if len(sys.argv) >= 7:
+if len(sys.argv) > 5:
     nrNodes = int(sys.argv[1])
     avgSendTime = int(sys.argv[2])
     experiment = int(sys.argv[3])
     simtime = int(sys.argv[4])
-    environment = int(sys.argv[5])
-    retransmitting = int(sys.argv[6])
-
+    if len(sys.argv) > 5:
+        environment = int(sys.argv[5])
+    if len(sys.argv) > 6:
+        retransmitting = int(sys.argv[6])
     if len(sys.argv) > 7:
-        full_collision = bool(int(sys.argv[7]))
+        sigma = float(sys.argv[7])
+    else:
+        sigma = 1.0
+    if len(sys.argv) > 8:
+        full_collision = bool(int(sys.argv[8]))
     print("Nodes:", nrNodes)
     print("AvgSendTime (exp. distributed):",avgSendTime)
     print("Experiment: ", experiment)
@@ -618,8 +658,9 @@ if len(sys.argv) >= 7:
     print("Full Collision: ", full_collision)
     print("Environment: ", environment)
     print("Retransmission Scheme: ", retransmitting)
+    print("Sigma Parameter for Rayleigh Path Loss: ", sigma)
 else:
-    print("usage: ./loraDir <nodes> <avgsend> <experiment> <simtime> <environment> [collision]")
+    print("usage: ./loraDir <nodes> <avgsend> <experiment> <simtime> <environment> <retransmitting> [sigma] [collision]")
     print("experiment 0 and 1 use 1 frequency only")
     exit(-1)
 
@@ -648,7 +689,7 @@ Ptx = 14
 gamma = 2.08
 d0 = 40.0
 var = 0           # variance ignored for now
-sigma = 1   #Scale parameter for Rayleigh fading
+# sigma = 1   #Scale parameter for Rayleigh fading
 waitDurationParam = 0.1 # Factor that determines the % of émission rate for the retransmission rate
 # base station antenna height in meters
 bs_height = 10
@@ -734,6 +775,7 @@ V = 3.0     # voltage XXX
 sent = sum(n.sent for n in nodes)
 energy = sum(node.packet.rectime * TX[int(node.packet.txpow)+2] * V * node.sent for node in nodes) / 1e6
 
+print("maxDist:", maxDist)
 print("energy (in J): ", energy)
 print("sent packets: ", sent)
 print("collisions: ", nrCollisions)
