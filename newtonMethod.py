@@ -23,17 +23,19 @@ def airtime(sf,cr,pl,bw):
     return Tpream + Tpayload
 
 lamb = 0.001
-T = airtime(12, 1, 20, 125) # values for experiment 4
-nu = 1.0/(2*T)
+T = airtime(12, 1, 20, 125)/1000 # values for experiment 4
+waitDurationParam = 0.1 # Factor that determines the % of émission rate for the retransmission rate
+nu = waitDurationParam*lamb
+print(T)
 
-for i in range(1,2001,10):
+for i in range(11,2001,10):
     N = i
 
     def f(n):
         return 2*T*N*lamb + (-2*T*(N*lamb+n*nu))*math.exp(-2*T*(N*lamb+n*nu))
-    for j in range(1,10):
-        print(f(j)),
-    # print(" end")
-    y = newton(f,2, maxiter=200)
-    n = (-y/2/T - N*lamb)/nu
+    #for j in range(1,10):
+    #    print("N=", N, ", j=", j, ", f(j)=", f(j)),
+    #print(" end")
+    n = newton(f,0, maxiter=1000)
+    #print("N = ", N, "n = ", n)
     print(n)

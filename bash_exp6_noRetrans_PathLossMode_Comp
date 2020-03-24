@@ -1,0 +1,60 @@
+#!/bin/bash
+INTERVAL=1000000
+SIMTIME=10000000
+MODE=4
+RETRANSMISSION=0
+
+LOSS_MODEL=0
+echo "Parameters: Interval Mode Simtime PathLossModel Retransmission" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+for i in {1..2001..10}
+        do
+                echo -n $i ", "
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+        done
+echo "work done" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+LOSS_MODEL=1
+echo "Parameters: Interval Mode Simtime PathLossModel Retransmission" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+for i in {1..2001..10}
+        do
+                echo -n $i ", "
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+        done
+echo "work done" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+LOSS_MODEL=2
+echo "Parameters: Interval Mode Simtime PathLossModel Retransmission" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+for i in {1..2001..10}
+        do
+                echo -n $i ", "
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+        done
+echo "work done" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+LOSS_MODEL=3
+echo "Parameters: Interval Mode Simtime PathLossModel Retransmission" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+for i in {1..2001..10}
+        do
+                echo -n $i ", "
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+        done
+echo "work done" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+LOSS_MODEL=4
+echo "Parameters: Interval Mode Simtime PathLossModel Retransmission" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+echo $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+
+for i in {1..2001..10}
+        do
+                echo -n $i ", "
+                python loraDir.py $i $INTERVAL $MODE $SIMTIME $LOSS_MODEL $RETRANSMISSION | grep "DER:"  | cut -d: -f2 | sed "s/ //" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt
+        done
+echo "work done" >> bash_export_exp6_noRetrans_PathLossMode_Comp.txt

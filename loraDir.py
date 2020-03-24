@@ -401,9 +401,9 @@ class myPacket():
         
         print("Prx:", Prx)
 
-        rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
-        print('Rayleigh fading ', rayFading)
-        Prx -= rayFading
+        #rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+        #print('Rayleigh fading ', rayFading)
+        #Prx -= rayFading
 
         print("Prx with Rayleigh Fading:", Prx)
 
@@ -482,6 +482,9 @@ def transmit(env,node):
             print("ERROR: packet already in")
         else:
             sensitivity = sensi[node.packet.sf - 7, [125,250,500].index(node.packet.bw) + 1]
+            rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+            #print('Rayleigh fading ', rayFading)
+            node.packet.rssi -= rayFading
             if node.packet.rssi < sensitivity:
                 print("node {}: packet will be lost".format(node.nodeid))
                 node.packet.lost = True
@@ -495,6 +498,7 @@ def transmit(env,node):
                     node.packet.collided = 0
                 packetsAtBS.append(node)
                 node.packet.addTime = env.now
+            node.packet.rssi += rayFading
 
         yield env.timeout(node.packet.rectime)
 
@@ -511,16 +515,17 @@ def transmit(env,node):
         if node.packet.processed == 1:
             global nrProcessed
             nrProcessed = nrProcessed + 1
-        if node.packet.collided == 1:
+        if node.packet.collided == 1 or node.packet.lost:
             tries = 1
             maxTries = 10
+            
             if retransmitting == 1:
                 #Random Channel Retransmission
-                while node.packet.collided == 1 and tries < maxTries:
+                while (node.packet.collided == 1 or node.packet.lost) and tries < maxTries:
                     tries += 1
                     node.transmissions += 1
                     nrEmitted += 1
-                    
+
                     # frequencyCollision, conditions
                     #
                     #        |f1-f2| <= 120 kHz if f1 or f2 has bw 500
@@ -546,13 +551,21 @@ def transmit(env,node):
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
                     yield env.timeout(2*node.packet.rectime) # param to adjust
                     
-                    if (checkcollision(node.packet)==1):
-                        nrCollisions += 1
-                        node.packet.collided = 1
+                    rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+                    node.packet.rssi -= rayFading
+                    if node.packet.rssi < sensitivity:
+                        print("node {}: packet will be lost".format(node.nodeid))
+                        node.packet.lost = True
                     else:
-                        node.packet.collided = 0
-                    packetsAtBS.append(node)
-                    node.packet.addTime = env.now
+                        node.packet.lost = False
+                        if (checkcollision(node.packet)==1):
+                            nrCollisions += 1
+                            node.packet.collided = 1
+                        else:
+                            node.packet.collided = 0
+                        packetsAtBS.append(node)
+                        node.packet.addTime = env.now
+                    node.packet.rssi += rayFading
 
                     yield env.timeout(node.packet.rectime)
 
@@ -563,7 +576,7 @@ def transmit(env,node):
 
             if retransmitting == 2:
                 #Random duration retransmission
-                while node.packet.collided == 1 and tries < maxTries:
+                while (node.packet.collided == 1 or node.packet.lost) and tries < maxTries:
                     tries += 1
                     node.transmissions += 1
                     nrEmitted += 1
@@ -571,13 +584,21 @@ def transmit(env,node):
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
                     yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(waitDurationParam*avgSendTime))))
                     
-                    if (checkcollision(node.packet)==1):
-                        nrCollisions += 1
-                        node.packet.collided = 1
+                    rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+                    node.packet.rssi -= rayFading
+                    if node.packet.rssi < sensitivity:
+                        print("node {}: packet will be lost".format(node.nodeid))
+                        node.packet.lost = True
                     else:
-                        node.packet.collided = 0
-                    packetsAtBS.append(node)
-                    node.packet.addTime = env.now
+                        node.packet.lost = False
+                        if (checkcollision(node.packet)==1):
+                            nrCollisions += 1
+                            node.packet.collided = 1
+                        else:
+                            node.packet.collided = 0
+                        packetsAtBS.append(node)
+                        node.packet.addTime = env.now
+                    node.packet.rssi += rayFading
 
                     yield env.timeout(node.packet.rectime)
 
@@ -588,7 +609,7 @@ def transmit(env,node):
             
             if retransmitting == 3:
                 #Random duration retransmission and random frequency
-                while node.packet.collided == 1 and tries < maxTries:
+                while (node.packet.collided == 1 or node.packet.lost) and tries < maxTries:
                     tries += 1
                     node.transmissions += 1
                     nrEmitted += 1
@@ -601,13 +622,21 @@ def transmit(env,node):
                     # Based on the hypothesis that the retransmissions will be over before the next node's packet
                     yield env.timeout(max(2*node.packet.rectime, random.expovariate(1.0/float(waitDurationParam*avgSendTime))))
                     
-                    if (checkcollision(node.packet)==1):
-                        nrCollisions += 1
-                        node.packet.collided = 1
+                    rayFading = 10*math.log10(np.random.rayleigh(sigma)) #Rayleigh fading
+                    node.packet.rssi -= rayFading
+                    if node.packet.rssi < sensitivity:
+                        print("node {}: packet will be lost".format(node.nodeid))
+                        node.packet.lost = True
                     else:
-                        node.packet.collided = 0
-                    packetsAtBS.append(node)
-                    node.packet.addTime = env.now
+                        node.packet.lost = False
+                        if (checkcollision(node.packet)==1):
+                            nrCollisions += 1
+                            node.packet.collided = 1
+                        else:
+                            node.packet.collided = 0
+                        packetsAtBS.append(node)
+                        node.packet.addTime = env.now
+                    node.packet.rssi += rayFading
 
                     yield env.timeout(node.packet.rectime)
 
@@ -616,12 +645,13 @@ def transmit(env,node):
                     if (node in packetsAtBS):
                         packetsAtBS.remove(node)
 
-            if node.packet.collided == 0:
+            if node.packet.collided == 0 and not node.packet.lost:
                 print("packet saved by the {}th transmission".format(tries))
-            if node.packet.collided == 1:
+            if node.packet.collided == 1 or node.packet.lost:
                 print("packet lost after {} transmissions".format(tries))
                 global nrLostAfterRetransmissions
                 nrLostAfterRetransmissions += 1
+
         if node.packet.collided == 0 and not node.packet.lost:
             global nrReceived
             nrReceived = nrReceived + 1
